@@ -3,9 +3,11 @@ import {
   CalculateMetadataFunction,
   Composition,
   getStaticFiles,
+  staticFile,
 } from "remotion";
 import { CaminoASiamTemplate, ResolvedClip } from "./CaminoASiamTemplate";
 import {
+  durationOverridesFile,
   FPS,
   outroDurationInSeconds,
   textOverrides,
@@ -14,6 +16,25 @@ import {
 
 type Props = {
   clips: ResolvedClip[];
+};
+
+// Lee public/duracion.json si existe (lo genera "npm run
+// subtitulos" con ffprobe, mucho más fiable que dejar que el
+// navegador calcule la duración de un vídeo).
+const loadDurationOverrides = async (): Promise<Record<string, number>> => {
+  const exists = getStaticFiles().some(
+    (file) => file.name === durationOverridesFile,
+  );
+  if (!exists) {
+    return {};
+  }
+  try {
+    const response = await fetch(staticFile(durationOverridesFile));
+    return (await response.json()) as Record<string, number>;
+  } catch (err) {
+    console.warn(`No se pudo leer ${durationOverridesFile}:`, err);
+    return {};
+  }
 };
 
 // Detecta automáticamente los vídeos que hay en public/, lee la
@@ -25,6 +46,8 @@ const calculateMetadata: CalculateMetadataFunction<Props> = async () => {
     )
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const durationOverrides = await loadDurationOverrides();
+
   // Si algún vídeo no se puede leer (archivo dañado, formato raro,
   // etc.) no debe tirar abajo el resto del montaje: le damos una
   // duración de reserva y dejamos que sea el propio clip, al
@@ -34,6 +57,16 @@ const calculateMetadata: CalculateMetadataFunction<Props> = async () => {
 
   const resolvedClips: ResolvedClip[] = await Promise.all(
     videoFiles.map(async (file) => {
+      const overrideDuration = durationOverrides[file.name];
+      if (typeof overrideDuration === "number") {
+        return {
+          src: file.src,
+          name: file.name,
+          durationInSeconds: overrideDuration,
+          text: textOverrides[file.name],
+        };
+      }
+
       try {
         const metadata = await getVideoMetadata(file.src);
         return {

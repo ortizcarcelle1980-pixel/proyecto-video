@@ -10,12 +10,22 @@
 // 4. Transcribe ese audio, palabra por palabra con su tiempo exacto.
 // 5. Corrige las palabras del canal (Gao Yord, yant, Meru, Sak Yant).
 // 6. Guarda el resultado en public/subtitulos.json.
+// 7. Mide la duración real del vídeo con ffprobe (más fiable que
+//    dejar que el navegador la calcule) y la guarda en
+//    public/duracion.json.
 //
 // La primera vez tarda varios minutos (instalar + descargar modelo).
 // Las siguientes veces solo tarda lo que tarde la transcripción.
 
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync, readdirSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  readdirSync,
+} from "node:fs";
 import path from "node:path";
 import {
   downloadWhisperModel,
@@ -29,6 +39,7 @@ import {
   WHISPER_PATH,
   WHISPER_VERSION,
   SUBTITLES_OUTPUT_FILE,
+  DURATION_OUTPUT_FILE,
 } from "./whisper-config.mjs";
 import { correctCaptions } from "./subtitle-corrections.mjs";
 
@@ -65,7 +76,7 @@ const findVideoFile = () => {
     );
   }
 
-  return path.join(PUBLIC_DIR, videoFiles[0]);
+  return { name: videoFiles[0], fullPath: path.join(PUBLIC_DIR, videoFiles[0]) };
 };
 
 const extractAudioToWav = (videoPath, wavPath) => {
@@ -75,15 +86,50 @@ const extractAudioToWav = (videoPath, wavPath) => {
   });
 };
 
+// ffprobe da la duración exacta del archivo. Es más fiable que
+// dejar que el navegador la calcule (con ciertos vídeos exportados
+// desde apps de edición, el navegador se equivoca).
+const measureDurationInSeconds = (videoPath) => {
+  const output = execSync(
+    `npx remotion ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`,
+    { encoding: "utf-8" },
+  ).trim();
+  const durationInSeconds = parseFloat(output);
+  if (!Number.isFinite(durationInSeconds)) {
+    throw new Error(`ffprobe no pudo medir la duración de ${videoPath} (salida: "${output}")`);
+  }
+  return durationInSeconds;
+};
+
+const saveDuration = (videoName, durationInSeconds) => {
+  let existing = {};
+  if (existsSync(DURATION_OUTPUT_FILE)) {
+    try {
+      existing = JSON.parse(readFileSync(DURATION_OUTPUT_FILE, "utf-8"));
+    } catch {
+      existing = {};
+    }
+  }
+  existing[videoName] = durationInSeconds;
+  writeFileSync(DURATION_OUTPUT_FILE, JSON.stringify(existing, null, 2));
+};
+
 const main = async () => {
-  const videoPath = findVideoFile();
-  console.log(`Vídeo a transcribir: ${path.relative(process.cwd(), videoPath)}`);
+  const video = findVideoFile();
+  console.log(`Vídeo a transcribir: ${path.relative(process.cwd(), video.fullPath)}`);
 
   console.log("\nInstalando whisper.cpp (si no estaba ya instalado)...");
   await installWhisperCpp({ to: WHISPER_PATH, version: WHISPER_VERSION });
 
   console.log(`Descargando modelo "${WHISPER_MODEL}" (si no estaba ya descargado)...`);
   await downloadWhisperModel({ folder: WHISPER_PATH, model: WHISPER_MODEL });
+
+  console.log("\nMidiendo duración exacta del vídeo con ffprobe...");
+  const durationInSeconds = measureDurationInSeconds(video.fullPath);
+  saveDuration(video.name, durationInSeconds);
+  console.log(
+    `Duración: ${durationInSeconds.toFixed(2)}s -> guardada en ${path.relative(process.cwd(), DURATION_OUTPUT_FILE)}`,
+  );
 
   let removeTempDir = false;
   if (!existsSync(TEMP_DIR)) {
@@ -92,7 +138,7 @@ const main = async () => {
   }
 
   const wavPath = path.join(TEMP_DIR, "audio.wav");
-  extractAudioToWav(videoPath, wavPath);
+  extractAudioToWav(video.fullPath, wavPath);
 
   console.log("\nTranscribiendo (esto puede tardar varios minutos)...");
   const whisperCppOutput = await transcribe({

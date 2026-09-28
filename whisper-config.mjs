@@ -34,3 +34,13 @@ export const SUBTITLES_OUTPUT_FILE = path.join(
   "public",
   "subtitulos.json",
 );
+
+// Dónde se guarda la duración exacta del vídeo (medida con ffprobe,
+// no con el navegador: el navegador a veces calcula mal la duración
+// de vídeos exportados desde apps de edición). La composición lee
+// este archivo para no depender de esa detección poco fiable.
+export const DURATION_OUTPUT_FILE = path.join(
+  process.cwd(),
+  "public",
+  "duracion.json",
+);

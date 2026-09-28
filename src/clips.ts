@@ -32,6 +32,12 @@ export const FPS = 30;
 // Extensiones de vídeo que se detectan automáticamente en public/.
 export const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm", ".m4v"];
 
+// Archivo con la duración exacta de cada vídeo, medida con ffprobe
+// por "npm run subtitulos" (más fiable que dejar que el navegador
+// la calcule). Si un vídeo no aparece aquí, se usa el método del
+// navegador como respaldo.
+export const durationOverridesFile = "duracion.json";
+
 // ============================================================
 // Subtítulos automáticos (estilo Reels)
 // ============================================================

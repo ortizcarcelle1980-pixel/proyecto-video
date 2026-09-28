@@ -208,8 +208,21 @@ const ClipErrorState: React.FC<{ name: string }> = ({ name }) => {
 // Carga public/subtitulos.json (con recarga automática si lo
 // regeneras mientras el Estudio está abierto).
 // ============================================================
-const useSubtitleCaptions = (): Caption[] => {
-  const [captions, setCaptions] = React.useState<Caption[]>([]);
+type SubtitleLoadState = {
+  captions: Caption[];
+  // "loading": todavía no hemos comprobado nada.
+  // "missing": public/subtitulos.json no existe (no has ejecutado
+  //   "npm run subtitulos" todavía, o el archivo se llama distinto).
+  // "empty": el archivo existe pero está vacío o mal formado.
+  // "ok": cargado con contenido.
+  status: "loading" | "missing" | "empty" | "ok";
+};
+
+const useSubtitleCaptions = (): SubtitleLoadState => {
+  const [state, setState] = React.useState<SubtitleLoadState>({
+    captions: [],
+    status: "loading",
+  });
   const { delayRender, continueRender } = useDelayRender();
   const [handle] = React.useState(() =>
     delayRender("Cargando public/subtitulos.json"),
@@ -222,13 +235,16 @@ const useSubtitleCaptions = (): Caption[] => {
   const fetchCaptions = React.useCallback(async () => {
     try {
       if (!subtitlesExist()) {
-        setCaptions([]);
+        setState({ captions: [], status: "missing" });
         continueRender(handle);
         return;
       }
       const response = await fetch(staticFile(subtitlesFile));
       const data = (await response.json()) as Caption[];
-      setCaptions(data);
+      setState({
+        captions: data,
+        status: data.length > 0 ? "ok" : "empty",
+      });
       continueRender(handle);
     } catch (err) {
       cancelRender(err);
@@ -243,7 +259,37 @@ const useSubtitleCaptions = (): Caption[] => {
     return () => watcher.cancel();
   }, [fetchCaptions]);
 
-  return captions;
+  return state;
+};
+
+// Aviso pequeño en una esquina: solo aparece cuando un clip está
+// marcado en subtitledClips pero, por lo que sea, no hay subtítulos
+// que mostrar. Así un fallo se ve en pantalla en vez de quedar en
+// silencio (vídeo sin nada encima y sin pista de por qué).
+const SubtitleDiagnosticBadge: React.FC<{ status: "missing" | "empty" }> = ({
+  status,
+}) => {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 16,
+        left: 16,
+        right: 16,
+        padding: "10px 14px",
+        borderRadius: 8,
+        backgroundColor: "rgba(180, 30, 30, 0.85)",
+        color: "white",
+        fontFamily: "Arial, sans-serif",
+        fontSize: 20,
+        lineHeight: 1.4,
+      }}
+    >
+      {status === "missing"
+        ? 'No se encuentra public/subtitulos.json. Ejecuta "npm run subtitulos".'
+        : "public/subtitulos.json está vacío o no se pudo leer. Vuelve a ejecutar \"npm run subtitulos\"."}
+    </div>
+  );
 };
 
 // Agrupa las palabras en páginas de N palabras (subtítulo estilo Reels).
@@ -328,7 +374,7 @@ const resolveUpperThirdCues = (
 };
 
 const SubtitledVideo: React.FC<{ clip: ResolvedClip }> = ({ clip }) => {
-  const captions = useSubtitleCaptions();
+  const { captions, status } = useSubtitleCaptions();
 
   const subtitlePages = React.useMemo(
     () => groupWordsIntoPages(captions, subtitleWordsPerPage),
@@ -347,6 +393,9 @@ const SubtitledVideo: React.FC<{ clip: ResolvedClip }> = ({ clip }) => {
 
   return (
     <VideoClip clip={clip}>
+      {status === "missing" || status === "empty" ? (
+        <SubtitleDiagnosticBadge status={status} />
+      ) : null}
       {subtitlePages.map((page, index) => {
         const startFrame = Math.round((page.startMs / 1000) * FPS);
         const endFrame = Math.round((page.endMs / 1000) * FPS);
