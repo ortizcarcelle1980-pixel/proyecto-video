@@ -10,3 +10,8 @@ out
 public/*.mp4
 public/*.mov
 public/*.webm
+
+# Instalación local de whisper.cpp (binario + modelos, varios GB) y
+# archivos temporales del script de subtítulos.
+whisper.cpp
+temp

@@ -16,6 +16,8 @@
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.529",
+    "@remotion/install-whisper-cpp": "4.0.529",
+    "@remotion/captions": "4.0.529",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
     "eslint": "9.19.0",
@@ -26,7 +28,8 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "subtitulos": "node subtitulos.mjs"
   },
   "sideEffects": [
     "*.css"
