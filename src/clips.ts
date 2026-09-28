@@ -1,33 +1,33 @@
 // ============================================================
-// PLANTILLA "CAMINO A SIAM" — configuración de clips y textos
+// PLANTILLA "CAMINO A SIAM" — textos y ajustes
 // ============================================================
-// Este es el único archivo que necesitas tocar para montar un vídeo:
-// - Añade tus clips (en orden) con su duración y su texto.
-// - Los vídeos deben estar dentro de la carpeta `public/`
-//   (ej: si pones `public/clip1.mp4`, aquí escribes src: "clip1.mp4").
-// - `durationInSeconds` es cuánto dura ESE CLIP en el vídeo final
-//   (no tiene que ser la duración completa del archivo original:
-//   se recorta desde el segundo 0 del clip).
-// - `text` es opcional. Si lo dejas vacío o lo borras, el clip
-//   se reproduce sin texto encima. Usa "\n" para partir en dos líneas.
+// Los clips se detectan AUTOMÁTICAMENTE a partir de lo que haya en
+// `public/` — no hace falta escribir el nombre del archivo en ningún
+// sitio. Cualquier vídeo (.mp4, .mov, .webm, .m4v) que metas ahí
+// aparece en el vídeo final, en orden alfabético por nombre de
+// archivo. Para controlar el orden, nombra tus archivos con un
+// número delante:
+//
+//   public/01-intro.mp4
+//   public/02-tatuaje.mp4
+//   public/03-cierre.mp4
+//
+// Aquí abajo solo defines, opcionalmente, el TEXTO que quieres que
+// aparezca encima de cada clip. La clave tiene que ser el nombre
+// exacto del archivo (tal como lo pusiste en public/).
 
-export const FPS = 30;
-
-export type ClipConfig = {
-  src: string;
-  durationInSeconds: number;
-  text?: string;
+export const textOverrides: Record<string, string> = {
+  // "01-intro.mp4": "ASÍ EMPEZÓ\nEL VIAJE",
+  // "02-tatuaje.mp4": "LA BENDICIÓN\nDEL AJARN",
 };
-
-export const clips: ClipConfig[] = [
-  // video1.mp4 ya es un montaje completo (con sus propios subtítulos
-  // incrustados), así que aquí no le añadimos texto para no duplicarlo.
-  // Su duración es la del propio vídeo editado.
-  { src: "video1.mp4", durationInSeconds: 29.5 },
-];
 
 // Nombre del canal que aparece en el cierre.
 export const channelName = "CAMINO A SIAM";
 
 // Duración del cierre final (segundos).
 export const outroDurationInSeconds = 2;
+
+export const FPS = 30;
+
+// Extensiones de vídeo que se detectan automáticamente en public/.
+export const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm", ".m4v"];

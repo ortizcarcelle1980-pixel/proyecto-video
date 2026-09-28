@@ -1,6 +1,13 @@
 import React from "react";
-import { AbsoluteFill, OffthreadVideo, Series, staticFile } from "remotion";
-import { channelName, clips, FPS, outroDurationInSeconds } from "./clips";
+import { AbsoluteFill, OffthreadVideo, Series } from "remotion";
+import { channelName, outroDurationInSeconds, FPS } from "./clips";
+
+export type ResolvedClip = {
+  src: string;
+  name: string;
+  durationInSeconds: number;
+  text?: string;
+};
 
 // Texto grande, blanco, con borde negro, en el tercio superior.
 // Para cambiar el estilo del texto (tamaño, color, grosor del borde),
@@ -81,15 +88,67 @@ const EmptyState: React.FC = () => {
           lineHeight: 1.5,
         }}
       >
-        Añade tus clips en{"\n"}
-        <b>public/</b> y edítalos en{"\n"}
-        <b>src/clips.ts</b>
+        No se encuentra ningún vídeo en{"\n"}
+        <b>public/</b>{"\n\n"}
+        Copia ahí tu(s) archivo(s) .mp4 y{"\n"}
+        recarga esta ventana.
       </div>
     </AbsoluteFill>
   );
 };
 
-export const CaminoASiamTemplate: React.FC = () => {
+const ClipErrorState: React.FC<{ name: string }> = ({ name }) => {
+  return (
+    <AbsoluteFill
+      style={{
+        backgroundColor: "#3a0d0d",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 80,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "Arial, sans-serif",
+          fontSize: 30,
+          color: "white",
+          textAlign: "center",
+          lineHeight: 1.5,
+        }}
+      >
+        No se pudo reproducir{"\n"}
+        <b>{name}</b>
+        {"\n\n"}
+        Comprueba que el archivo no esté{"\n"}
+        dañado y que sea un formato de{"\n"}
+        vídeo compatible (mp4/mov/webm).
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+const VideoClip: React.FC<{ clip: ResolvedClip }> = ({ clip }) => {
+  const [failed, setFailed] = React.useState(false);
+
+  if (failed) {
+    return <ClipErrorState name={clip.name} />;
+  }
+
+  return (
+    <AbsoluteFill>
+      <OffthreadVideo
+        src={clip.src}
+        onError={() => setFailed(true)}
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      />
+      {clip.text ? <OverlayText text={clip.text} /> : null}
+    </AbsoluteFill>
+  );
+};
+
+export const CaminoASiamTemplate: React.FC<{ clips: ResolvedClip[] }> = ({
+  clips,
+}) => {
   if (clips.length === 0) {
     return (
       <AbsoluteFill>
@@ -104,15 +163,12 @@ export const CaminoASiamTemplate: React.FC = () => {
         {clips.map((clip, index) => (
           <Series.Sequence
             key={`${clip.src}-${index}`}
-            durationInFrames={Math.round(clip.durationInSeconds * FPS)}
+            durationInFrames={Math.max(
+              1,
+              Math.round(clip.durationInSeconds * FPS),
+            )}
           >
-            <AbsoluteFill>
-              <OffthreadVideo
-                src={staticFile(clip.src)}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-              {clip.text ? <OverlayText text={clip.text} /> : null}
-            </AbsoluteFill>
+            <VideoClip clip={clip} />
           </Series.Sequence>
         ))}
         <Series.Sequence
