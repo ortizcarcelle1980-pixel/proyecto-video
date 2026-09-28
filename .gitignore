@@ -5,3 +5,8 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# Tus clips de origen: se quedan solo en tu ordenador, no se suben a git.
+public/*.mp4
+public/*.mov
+public/*.webm
