@@ -20,10 +20,10 @@ export type ClipConfig = {
 };
 
 export const clips: ClipConfig[] = [
-  // Ejemplo — sustituye por tus propios clips:
-  // { src: "clip1.mp4", durationInSeconds: 4, text: "ASÍ EMPEZÓ\nEL VIAJE" },
-  // { src: "clip2.mp4", durationInSeconds: 3, text: "DÍA 2 EN TAILANDIA" },
-  // { src: "clip3.mp4", durationInSeconds: 5 },
+  // video1.mp4 ya es un montaje completo (con sus propios subtítulos
+  // incrustados), así que aquí no le añadimos texto para no duplicarlo.
+  // Su duración es la del propio vídeo editado.
+  { src: "video1.mp4", durationInSeconds: 29.5 },
 ];
 
 // Nombre del canal que aparece en el cierre.
